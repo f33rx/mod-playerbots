@@ -483,6 +483,14 @@ AiPlayerbot.MaxAoeAvoidRadius = 15.0
 # A whitelist of aoe spell IDs that should not be avoided
 AiPlayerbot.AoeAvoidSpellWhitelist = 50759,57491,13810,29946
 
+# Move to regain line of sight in combat. Ranged bots in a group whose target
+# is behind an obstacle walk to the nearest group member that can see it, and
+# hold position if none can. Melee and solo bots walk towards the target.
+# Healers consider group members they cannot see instead of ignoring them.
+# Costs one extra line of sight check per bot in combat every two seconds.
+# Default: 0 (disabled)
+AiPlayerbot.RegainLineOfSight = 0
+
 # Enable healer bot save mana strategy
 # Default: 1 (enabled)
 AiPlayerbot.AutoSaveMana = 1
