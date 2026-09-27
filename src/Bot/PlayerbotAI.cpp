@@ -4301,11 +4301,33 @@ bool PlayerbotAI::IsInterruptableSpellCasting(Unit* target, std::string const sp
             return true;
 
         if (spellInfo->Effects[i].Effect == SPELL_EFFECT_INTERRUPT_CAST &&
-            !target->IsImmunedToSpellEffect(spellInfo, i))
+            !target->IsImmunedToSpellEffect(spellInfo, i) && IsCastingInterruptibleSpell(target))
             return true;
 
         if ((spellInfo->Effects[i].Effect == SPELL_EFFECT_APPLY_AURA) &&
             spellInfo->Effects[i].ApplyAuraName == SPELL_AURA_MOD_SILENCE)
+            return true;
+    }
+
+    return false;
+}
+
+// Mirrors the test in Spell::EffectInterruptCast, so a kick is only spent on a cast it can stop
+bool PlayerbotAI::IsCastingInterruptibleSpell(Unit const* target)
+{
+    if (Spell const* spell = target->GetCurrentSpell(CURRENT_GENERIC_SPELL))
+    {
+        SpellInfo const* castInfo = spell->GetSpellInfo();
+        if (castInfo->PreventionType == SPELL_PREVENTION_TYPE_SILENCE &&
+            (castInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_INTERRUPT))
+            return true;
+    }
+
+    if (Spell const* spell = target->GetCurrentSpell(CURRENT_CHANNELED_SPELL))
+    {
+        SpellInfo const* castInfo = spell->GetSpellInfo();
+        if (castInfo->PreventionType == SPELL_PREVENTION_TYPE_SILENCE &&
+            (castInfo->ChannelInterruptFlags & CHANNEL_INTERRUPT_FLAG_INTERRUPT))
             return true;
     }
 

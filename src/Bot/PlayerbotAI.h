@@ -510,6 +510,7 @@ public:
     virtual bool HasAnyAuraOf(Unit* player, ...);
 
     virtual bool IsInterruptableSpellCasting(Unit* player, std::string const spell);
+    static bool IsCastingInterruptibleSpell(Unit const* target);
     virtual bool HasAuraToDispel(Unit* player, uint32 dispelType);
     bool CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell = true, Item* itemTarget = nullptr,
                       Item* castItem = nullptr);
