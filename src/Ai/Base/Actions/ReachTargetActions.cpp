@@ -38,10 +38,19 @@ bool ReachTargetAction::Execute(Event /*event*/)
                 destZ = target->GetPositionZ() + dz * scale;
             }
 
+            // The stack spot is behind the tank's victim. If clamping toward spell range
+            // crossed onto the mob side of that spot, stay on the stack instead of looping.
+            float destToMob = target->GetExactDist2d(destX, destY);
+            if (destToMob + 1.0f < spot.GetExactDist2d(target))
+            {
+                destX = spot.GetPositionX();
+                destY = spot.GetPositionY();
+                destZ = spot.GetPositionZ();
+            }
+
             bot->UpdateAllowedPositionZ(destX, destY, destZ);
 
-            if (bot->GetExactDist(destX, destY, destZ) <= 2.5f && bot->IsWithinCombatRange(target, distance) &&
-                !BotIsInFrontOfLivingTank(botAI, bot, target))
+            if (bot->GetExactDist(destX, destY, destZ) <= 2.5f)
                 return false;
 
             return MoveTo(bot->GetMapId(), destX, destY, destZ, false, false, false, true,

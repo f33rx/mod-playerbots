@@ -96,19 +96,16 @@ Player* FindGroupTank(PlayerbotAI* botAI, Player* bot, Unit* target)
 
 // True only when a real mob defines the safe side. Facing is written either way
     // so follow can still stand behind the tank between pulls.
-bool AwayFromPull(Player* tank, Unit* preferred, float& awayX, float& awayY)
+// Direction is the tank's own victim only. The bot's add must not redefine "behind".
+// Facing is written either way so follow still has a vector between pulls.
+// Returns false when no living victim defines that side.
+bool AwayFromPull(Player* tank, float& awayX, float& awayY)
 {
     awayX = -std::cos(tank->GetOrientation());
     awayY = -std::sin(tank->GetOrientation());
 
-    Unit* victim = nullptr;
-    if (preferred && preferred->IsAlive() && SamePlace(preferred, tank) && preferred != tank)
-        victim = preferred;
-    else if (Unit* tankVictim = tank->GetVictim())
-        if (tankVictim->IsAlive() && SamePlace(tankVictim, tank))
-            victim = tankVictim;
-
-    if (!victim)
+    Unit* victim = tank->GetVictim();
+    if (!victim || !victim->IsAlive() || !SamePlace(victim, tank) || victim == tank)
         return false;
 
     float dx = tank->GetPositionX() - victim->GetPositionX();
@@ -134,7 +131,7 @@ bool GetBehindTankNearHealerLocation(PlayerbotAI* botAI, Player* bot, WorldLocat
 
     float awayX = 0.0f;
     float awayY = 0.0f;
-    AwayFromPull(tank, target, awayX, awayY);
+    AwayFromPull(tank, awayX, awayY);
 
     float ax = tank->GetPositionX() + awayX * BEHIND_TANK_YARDS;
     float ay = tank->GetPositionY() + awayY * BEHIND_TANK_YARDS;
@@ -281,7 +278,7 @@ bool BotIsInFrontOfLivingTank(PlayerbotAI* botAI, Player* bot, Unit* target)
 
     float awayX = 0.0f;
     float awayY = 0.0f;
-    if (!AwayFromPull(tank, target, awayX, awayY))
+    if (!AwayFromPull(tank, awayX, awayY))
         return false;
 
     float bx = bot->GetPositionX() - tank->GetPositionX();
