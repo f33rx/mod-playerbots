@@ -94,10 +94,8 @@ Player* FindGroupTank(PlayerbotAI* botAI, Player* bot, Unit* target)
     return holding ? holding : first;
 }
 
-// True only when a real mob defines the safe side. Facing is written either way
-    // so follow can still stand behind the tank between pulls.
-// Direction is the tank's own victim only. The bot's add must not redefine "behind".
-// Facing is written either way so follow still has a vector between pulls.
+// Direction is the tank's own victim only. The bot's add must not redefine behind.
+// Facing is still written so follow has a vector between pulls.
 // Returns false when no living victim defines that side.
 bool AwayFromPull(Player* tank, float& awayX, float& awayY)
 {
@@ -272,6 +270,7 @@ bool BotIsInFrontOfLivingTank(PlayerbotAI* botAI, Player* bot, Unit* target)
     if (!botAI || !bot || !target || botAI->IsTank(bot))
         return false;
 
+    // target chooses which tank is holding this mob. The behind vector is that tank's victim.
     Player* tank = FindGroupTank(botAI, bot, target);
     if (!tank)
         return false;

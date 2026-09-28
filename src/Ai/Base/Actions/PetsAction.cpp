@@ -412,7 +412,7 @@ bool TogglePetSpellAutoCastAction::Execute(Event /*event*/)
         for (PetSpellMap::const_iterator itr = pet->m_spells.begin(); itr != pet->m_spells.end(); ++itr)
         {
             SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(itr->first);
-            if (!IsHunterPetTaunt(spellInfo))
+            if (!spellInfo || !IsHunterPetTaunt(spellInfo))
                 continue;
             for (unsigned int& autospell : pet->m_autospells)
             {
