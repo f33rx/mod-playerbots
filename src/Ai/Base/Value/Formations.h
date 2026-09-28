@@ -18,8 +18,9 @@ class Unit;
 
 // Non-tanks stand behind the living tank, on the healer when that healer
 // is already behind the tank. A healer in front does not pull the group in.
-bool GetBehindTankNearHealerLocation(PlayerbotAI* botAI, Player* bot, WorldLocation& out);
+bool GetBehindTankNearHealerLocation(PlayerbotAI* botAI, Player* bot, WorldLocation& out, Unit* target = nullptr);
 bool GetTankSideMeleeLocation(PlayerbotAI* botAI, Player* bot, Unit* target, float range, WorldLocation& out);
+bool BotIsInFrontOfLivingTank(PlayerbotAI* botAI, Player* bot, Unit* target);
 
 class Formation : public AiNamedObject
 {
