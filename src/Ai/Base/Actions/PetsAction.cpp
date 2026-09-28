@@ -341,7 +341,7 @@ bool PetsAction::Execute(Event event)
 }
 
 
-static bool GroupHasLivingTank(PlayerbotAI* botAI, Player* bot)
+static bool GroupHasLivingTank(PlayerbotAI* botAI, Player* bot, bool keepSuppressed)
 {
     Group* group = bot->GetGroup();
     if (!group)
@@ -355,7 +355,9 @@ static bool GroupHasLivingTank(PlayerbotAI* botAI, Player* bot)
             continue;
         if (!botAI->IsTank(member))
             continue;
-        if (bot->GetExactDist2d(member) <= 40.0f)
+        // 45 yards once Growl is already off, so a tank pacing the edge does not flap.
+        float limit = keepSuppressed ? 45.0f : 40.0f;
+        if (bot->GetExactDist2d(member) <= limit)
             return true;
     }
 
@@ -372,7 +374,10 @@ static bool IsHunterPetTaunt(SpellInfo const* spellInfo)
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
     {
         uint32 effect = spellInfo->Effects[i].Effect;
-        if (effect == SPELL_EFFECT_THREAT || effect == SPELL_EFFECT_ATTACK_ME)
+        // Growl base points are positive. Cower ranks that also use effect 63 are negative.
+        if (effect == SPELL_EFFECT_THREAT && spellInfo->Effects[i].BasePoints > 0)
+            return true;
+        if (effect == SPELL_EFFECT_ATTACK_ME)
             return true;
     }
 
@@ -401,6 +406,27 @@ bool TogglePetSpellAutoCastAction::Execute(Event /*event*/)
         if (autospellItr != pet->m_autospells.end())
             pet->m_autospells.erase(autospellItr);
     }
+    bool tauntOn = false;
+    if (bot->getClass() == CLASS_HUNTER)
+    {
+        for (PetSpellMap::const_iterator itr = pet->m_spells.begin(); itr != pet->m_spells.end(); ++itr)
+        {
+            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(itr->first);
+            if (!IsHunterPetTaunt(spellInfo))
+                continue;
+            for (unsigned int& autospell : pet->m_autospells)
+            {
+                if (autospell == itr->first)
+                {
+                    tauntOn = true;
+                    break;
+                }
+            }
+            if (tauntOn)
+                break;
+        }
+    }
+
     bool toggled = false;
     for (PetSpellMap::const_iterator itr = pet->m_spells.begin(); itr != pet->m_spells.end(); ++itr)
     {
@@ -424,7 +450,7 @@ bool TogglePetSpellAutoCastAction::Execute(Event /*event*/)
 
         // A living tank holds the mob. Hunter pet Growl comes back on when that tank dies.
         if (shouldApply && bot->getClass() == CLASS_HUNTER && IsHunterPetTaunt(spellInfo) &&
-            GroupHasLivingTank(botAI, bot))
+            GroupHasLivingTank(botAI, bot, !tauntOn))
             shouldApply = false;
         bool isAutoCast = false;
         for (unsigned int& m_autospell : pet->m_autospells)
