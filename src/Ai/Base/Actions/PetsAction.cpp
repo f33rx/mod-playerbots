@@ -350,16 +350,26 @@ static bool GroupHasLivingTank(PlayerbotAI* botAI, Player* bot)
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (member && member->IsAlive() && botAI->IsTank(member))
+        if (!member || !member->IsAlive() || !member->IsInWorld() || member->GetMapId() != bot->GetMapId() ||
+            member->GetInstanceId() != bot->GetInstanceId())
+            continue;
+        if (botAI->IsTank(member))
             return true;
     }
 
     return false;
 }
 
-static bool IsHunterGrowl(SpellInfo const* spellInfo)
+static bool IsHunterPetTaunt(SpellInfo const* spellInfo)
 {
-    return spellInfo && spellInfo->SpellName[0] && !strcmpi(spellInfo->SpellName[0], "Growl");
+    if (!spellInfo)
+        return false;
+
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+        if (spellInfo->Effects[i].Effect == SPELL_EFFECT_ATTACK_ME)
+            return true;
+
+    return false;
 }
 
 bool TogglePetSpellAutoCastAction::Execute(Event /*event*/)
@@ -406,7 +416,7 @@ bool TogglePetSpellAutoCastAction::Execute(Event /*event*/)
         }
 
         // A living tank holds the mob. Hunter pet Growl comes back on when that tank dies.
-        if (shouldApply && bot->getClass() == CLASS_HUNTER && IsHunterGrowl(spellInfo) &&
+        if (shouldApply && bot->getClass() == CLASS_HUNTER && IsHunterPetTaunt(spellInfo) &&
             GroupHasLivingTank(botAI, bot))
             shouldApply = false;
         bool isAutoCast = false;

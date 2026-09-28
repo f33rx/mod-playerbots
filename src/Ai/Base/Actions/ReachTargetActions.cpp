@@ -16,11 +16,12 @@ static constexpr float GROUP_SIGHT_SPOT_DISTANCE = 3.0f;
 bool ReachTargetAction::Execute(Event /*event*/)
 {
     Unit* target = AI_VALUE(Unit*, GetTargetName());
-    if (target && bot->GetGroup() && !botAI->IsTank(bot))
+    // Heal and resurrect reaches use this class too. Only hostile targets get the stack.
+    if (target && bot->IsValidAttackTarget(target) && bot->GetGroup() && !botAI->IsTank(bot))
     {
         bool holdBack = PlayerbotAI::IsRanged(bot) || botAI->IsHeal(bot);
         WorldLocation spot;
-        if (holdBack && GetBehindTankNearHealerLocation(botAI, bot, spot))
+        if (holdBack && GetBehindTankNearHealerLocation(botAI, bot, spot, target))
         {
             float dx = spot.GetPositionX() - target->GetPositionX();
             float dy = spot.GetPositionY() - target->GetPositionY();
@@ -29,7 +30,6 @@ bool ReachTargetAction::Execute(Event /*event*/)
             float destX = spot.GetPositionX();
             float destY = spot.GetPositionY();
             float destZ = spot.GetPositionZ();
-            // Stay on the tank's side of the mob, close enough to cast.
             if (len > distance && len > 0.5f)
             {
                 float scale = distance / len;
@@ -37,6 +37,8 @@ bool ReachTargetAction::Execute(Event /*event*/)
                 destY = target->GetPositionY() + dy * scale;
                 destZ = target->GetPositionZ() + dz * scale;
             }
+
+            bot->UpdateAllowedPositionZ(destX, destY, destZ);
 
             if (bot->GetExactDist(destX, destY, destZ) <= 2.5f && bot->IsWithinCombatRange(target, distance))
                 return false;
@@ -72,10 +74,15 @@ bool ReachTargetAction::isUseful()
         return false;
     }
     Unit* target = GetTarget();
-    // float dis = distance + CONTACT_DISTANCE;
-    return target &&
-           !bot->IsWithinCombatRange(target, distance);  // ServerFacade::instance().IsDistanceGreaterThan(AI_VALUE2(float,
-                                                         // "distance", GetTargetName()), distance);
+    if (!target)
+        return false;
+
+    if (!bot->IsWithinCombatRange(target, distance))
+        return true;
+
+    // Already in range but standing on the mob's side of the tank. Step back.
+    return bot->IsValidAttackTarget(target) && (PlayerbotAI::IsRanged(bot) || botAI->IsHeal(bot)) &&
+           BotIsInFrontOfLivingTank(botAI, bot, target);
 }
 
 std::string const ReachTargetAction::GetTargetName() { return "current target"; }
@@ -129,7 +136,7 @@ Player* ReachLineOfSightAction::FindGroupMemberInSightOf(Unit* target)
             continue;
 
         float distance = bot->GetExactDist(member);
-        if (distance <= GROUP_SIGHT_SPOT_DISTANCE)
+        if (distance <= GROUP_SIGHT_SPOT_DISTANCE || distance >= sPlayerbotAIConfig.sightDistance)
             continue;
 
         if (!member->IsWithinCombatRange(target, range) || !member->IsWithinLOSInMap(target))
