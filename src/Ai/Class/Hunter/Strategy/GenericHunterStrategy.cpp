@@ -57,6 +57,9 @@ void GenericHunterStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
     CombatStrategy::InitTriggers(triggers);
 
+    // Re-check Growl during the fight. The pet strategy only toggles it out of combat.
+    triggers.push_back(new TriggerNode("has pet", { NextAction("toggle pet spell", 60.0f) }));
+
     // Mark/Ammo/Mana Triggers
     triggers.push_back(new TriggerNode("no ammo", { NextAction("equip upgrades packet action", 30.0f) }));
     triggers.push_back(new TriggerNode("hunter's mark", { NextAction("hunter's mark", 29.5f) }));

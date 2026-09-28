@@ -5,6 +5,7 @@
  */
 
 #include "PetsAction.h"
+#include "Group.h"
 #include "CharmInfo.h"
 #include "Creature.h"
 #include "CreatureAI.h"
@@ -339,6 +340,28 @@ bool PetsAction::Execute(Event event)
     return true;
 }
 
+
+static bool GroupHasLivingTank(PlayerbotAI* botAI, Player* bot)
+{
+    Group* group = bot->GetGroup();
+    if (!group)
+        return false;
+
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (member && member->IsAlive() && botAI->IsTank(member))
+            return true;
+    }
+
+    return false;
+}
+
+static bool IsHunterGrowl(SpellInfo const* spellInfo)
+{
+    return spellInfo && spellInfo->SpellName[0] && !strcmpi(spellInfo->SpellName[0], "Growl");
+}
+
 bool TogglePetSpellAutoCastAction::Execute(Event /*event*/)
 {
     Pet* pet = bot->GetPet();
@@ -381,6 +404,11 @@ bool TogglePetSpellAutoCastAction::Execute(Event /*event*/)
                 break;
             }
         }
+
+        // A living tank holds the mob. Hunter pet Growl comes back on when that tank dies.
+        if (shouldApply && bot->getClass() == CLASS_HUNTER && IsHunterGrowl(spellInfo) &&
+            GroupHasLivingTank(botAI, bot))
+            shouldApply = false;
         bool isAutoCast = false;
         for (unsigned int& m_autospell : pet->m_autospells)
         {
