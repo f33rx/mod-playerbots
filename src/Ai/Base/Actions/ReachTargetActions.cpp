@@ -40,7 +40,8 @@ bool ReachTargetAction::Execute(Event /*event*/)
 
             bot->UpdateAllowedPositionZ(destX, destY, destZ);
 
-            if (bot->GetExactDist(destX, destY, destZ) <= 2.5f && bot->IsWithinCombatRange(target, distance))
+            if (bot->GetExactDist(destX, destY, destZ) <= 2.5f && bot->IsWithinCombatRange(target, distance) &&
+                !BotIsInFrontOfLivingTank(botAI, bot, target))
                 return false;
 
             return MoveTo(bot->GetMapId(), destX, destY, destZ, false, false, false, true,

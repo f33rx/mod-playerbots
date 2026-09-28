@@ -353,21 +353,28 @@ static bool GroupHasLivingTank(PlayerbotAI* botAI, Player* bot)
         if (!member || !member->IsAlive() || !member->IsInWorld() || member->GetMapId() != bot->GetMapId() ||
             member->GetInstanceId() != bot->GetInstanceId())
             continue;
-        if (botAI->IsTank(member))
+        if (!botAI->IsTank(member))
+            continue;
+        if (bot->GetExactDist2d(member) <= 40.0f)
             return true;
     }
 
     return false;
 }
 
+// Spell.dbc on this 3.3.5 client: Growl ranks (2649 through 61676) are effect 63
+// (SPELL_EFFECT_THREAT). Tenacity Taunt (53477) is effect 114 (SPELL_EFFECT_ATTACK_ME).
 static bool IsHunterPetTaunt(SpellInfo const* spellInfo)
 {
     if (!spellInfo)
         return false;
 
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
-        if (spellInfo->Effects[i].Effect == SPELL_EFFECT_ATTACK_ME)
+    {
+        uint32 effect = spellInfo->Effects[i].Effect;
+        if (effect == SPELL_EFFECT_THREAT || effect == SPELL_EFFECT_ATTACK_ME)
             return true;
+    }
 
     return false;
 }

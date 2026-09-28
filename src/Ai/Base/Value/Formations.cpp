@@ -94,19 +94,28 @@ Player* FindGroupTank(PlayerbotAI* botAI, Player* bot, Unit* target)
     return holding ? holding : first;
 }
 
-bool AwayFromPull(Player* tank, float& awayX, float& awayY)
+// True only when a real mob defines the safe side. Facing is written either way
+    // so follow can still stand behind the tank between pulls.
+bool AwayFromPull(Player* tank, Unit* preferred, float& awayX, float& awayY)
 {
     awayX = -std::cos(tank->GetOrientation());
     awayY = -std::sin(tank->GetOrientation());
-    Unit* victim = tank->GetVictim();
-    if (!victim || !victim->IsAlive() || !SamePlace(victim, tank))
-        return true;
+
+    Unit* victim = nullptr;
+    if (preferred && preferred->IsAlive() && SamePlace(preferred, tank) && preferred != tank)
+        victim = preferred;
+    else if (Unit* tankVictim = tank->GetVictim())
+        if (tankVictim->IsAlive() && SamePlace(tankVictim, tank))
+            victim = tankVictim;
+
+    if (!victim)
+        return false;
 
     float dx = tank->GetPositionX() - victim->GetPositionX();
     float dy = tank->GetPositionY() - victim->GetPositionY();
     float len = std::sqrt(dx * dx + dy * dy);
     if (len <= 0.5f)
-        return true;
+        return false;
 
     awayX = dx / len;
     awayY = dy / len;
@@ -125,7 +134,7 @@ bool GetBehindTankNearHealerLocation(PlayerbotAI* botAI, Player* bot, WorldLocat
 
     float awayX = 0.0f;
     float awayY = 0.0f;
-    AwayFromPull(tank, awayX, awayY);
+    AwayFromPull(tank, target, awayX, awayY);
 
     float ax = tank->GetPositionX() + awayX * BEHIND_TANK_YARDS;
     float ay = tank->GetPositionY() + awayY * BEHIND_TANK_YARDS;
@@ -152,7 +161,7 @@ bool GetBehindTankNearHealerLocation(PlayerbotAI* botAI, Player* bot, WorldLocat
     {
         float hx = healer->GetPositionX() - tank->GetPositionX();
         float hy = healer->GetPositionY() - tank->GetPositionY();
-        healerBehind = hx * awayX + hy * awayY >= 0.0f;
+        healerBehind = hx * awayX + hy * awayY >= 2.0f;
     }
 
     if (healerBehind)
@@ -218,9 +227,8 @@ bool GetTankSideMeleeLocation(PlayerbotAI* botAI, Player* bot, Unit* target, flo
     }
 
     float reach = std::max(range, target->GetCombatReach() + bot->GetCombatReach());
-    float scale = reach / len;
-    float ax = originX + dx * scale;
-    float ay = originY + dy * scale;
+    float ax = originX;
+    float ay = originY;
 
     uint32 index = 0;
     uint32 count = 0;
@@ -229,20 +237,32 @@ bool GetTankSideMeleeLocation(PlayerbotAI* botAI, Player* bot, Unit* target, flo
         for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         {
             Player* member = ref->GetSource();
-            if (!member || member == tank || !member->IsAlive() || botAI->IsTank(member) || botAI->IsHeal(member) ||
-                PlayerbotAI::IsRanged(member))
+            if (!member || member == tank || !member->IsAlive() || !SamePlace(member, bot) || botAI->IsTank(member) ||
+                botAI->IsHeal(member) || PlayerbotAI::IsRanged(member))
                 continue;
             if (member == bot)
                 index = count;
             ++count;
         }
     }
-    if (count > 0)
+    float ux = dx / len;
+    float uy = dy / len;
+    float ox = ux * reach;
+    float oy = uy * reach;
+    if (count > 1)
     {
-        float side = (static_cast<float>(index) - (count - 1) / 2.0f) * 2.5f;
-        ax += (-dy / len) * side;
-        ay += (dx / len) * side;
+        float side = (static_cast<float>(index) - (count - 1) / 2.0f) * 2.0f;
+        ox += -uy * side;
+        oy += ux * side;
+        float olen = std::sqrt(ox * ox + oy * oy);
+        if (olen > 0.1f)
+        {
+            ox = ox / olen * reach;
+            oy = oy / olen * reach;
+        }
     }
+    ax = originX + ox;
+    ay = originY + oy;
 
     float az = originZ;
     bot->UpdateAllowedPositionZ(ax, ay, az);
@@ -261,7 +281,7 @@ bool BotIsInFrontOfLivingTank(PlayerbotAI* botAI, Player* bot, Unit* target)
 
     float awayX = 0.0f;
     float awayY = 0.0f;
-    if (!AwayFromPull(tank, awayX, awayY))
+    if (!AwayFromPull(tank, target, awayX, awayY))
         return false;
 
     float bx = bot->GetPositionX() - tank->GetPositionX();
