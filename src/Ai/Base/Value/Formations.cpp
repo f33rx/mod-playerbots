@@ -48,7 +48,6 @@ bool ValidateTargetContext(Unit* a, Unit* b)
     return ValidateTargetContext(a, b, unused);
 }
 
-
 namespace
 {
 constexpr float TANK_NEAR_YARDS = 40.0f;

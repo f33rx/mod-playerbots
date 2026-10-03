@@ -340,7 +340,6 @@ bool PetsAction::Execute(Event event)
     return true;
 }
 
-
 static bool GroupHasLivingTank(PlayerbotAI* botAI, Player* bot, bool keepSuppressed)
 {
     Group* group = bot->GetGroup();
