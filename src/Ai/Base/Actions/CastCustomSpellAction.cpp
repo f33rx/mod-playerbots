@@ -7,9 +7,13 @@
 #include "CastCustomSpellAction.h"
 #include "ChatHelper.h"
 #include "Event.h"
+#include "Group.h"
 #include "ItemUsageValue.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
+
+#include <algorithm>
+#include <cctype>
 
 size_t FindLastSeparator(std::string const text, std::string const sep)
 {
@@ -74,7 +78,26 @@ bool CastCustomSpellAction::Execute(Event event)
 
                 if (spell)
                 {
-                    if (Player* targetPlayer = ObjectAccessor::FindPlayerByName(targetName))
+                    Player* targetPlayer = ObjectAccessor::FindPlayerByName(targetName);
+                    if (!targetPlayer && bot->GetGroup())
+                    {
+                        std::string wanted = targetName;
+                        std::transform(wanted.begin(), wanted.end(), wanted.begin(), ::tolower);
+                        for (GroupReference* ref = bot->GetGroup()->GetFirstMember(); ref; ref = ref->next())
+                        {
+                            Player* member = ref->GetSource();
+                            if (!member)
+                                continue;
+                            std::string have = member->GetName();
+                            std::transform(have.begin(), have.end(), have.begin(), ::tolower);
+                            if (have == wanted)
+                            {
+                                targetPlayer = member;
+                                break;
+                            }
+                        }
+                    }
+                    if (targetPlayer)
                     {
                         target = targetPlayer;
                         text = truncatedText;
@@ -130,15 +153,23 @@ bool CastCustomSpellAction::Execute(Event event)
         return false;
     }
 
-    if (target != bot && !bot->HasInArc(CAST_ANGLE_IN_FRONT, target, sPlayerbotAIConfig.SightDistance))
+    // Ritual of Summoning targets someone who is not here. Turning to face
+    // them fails past sight distance and the requeued command drops the name,
+    // so the next attempt casts on self.
+    if (spell != 698 && target != bot && !bot->HasInArc(CAST_ANGLE_IN_FRONT, target, sPlayerbotAIConfig.SightDistance))
     {
         ServerFacade::instance().SetFacingTo(bot, target);
         botAI->SetNextCheckDelay(sPlayerbotAIConfig.ReactDelay);
 
         msg << "cast " << text;
+        if (target->GetTypeId() == TYPEID_PLAYER)
+            msg << " on " << target->GetName();
         botAI->HandleCommand(CHAT_MSG_WHISPER, msg.str(), master);
         return true;
     }
+
+    if (spell == 698)
+        bot->StopMoving();
 
     std::ostringstream spellName;
     spellName << ChatHelper::FormatSpell(spellInfo) << " on ";

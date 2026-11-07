@@ -7,6 +7,7 @@
 #ifndef PLAYERBOTS_TRIGGERCONTEXT_H
 #define PLAYERBOTS_TRIGGERCONTEXT_H
 
+#include "AssistRitualAction.h"
 #include "BotStateTriggers.h"
 #include "CureTriggers.h"
 #include "FishingTriggers.h"
@@ -35,6 +36,7 @@ public:
     TriggerContext()
     {
         creators["return"] = &TriggerContext::_return;
+        creators["ritual of summoning"] = &TriggerContext::ritual_of_summoning;
         creators["sit"] = &TriggerContext::sit;
         creators["return to stay position"] = &TriggerContext::return_to_stay_position;
         creators["collision"] = &TriggerContext::collision;
@@ -338,6 +340,7 @@ private:
     static Trigger* NoAttackers(PlayerbotAI* botAI) { return new NoAttackersTrigger(botAI); }
     static Trigger* TankAssist(PlayerbotAI* botAI) { return new TankAssistTrigger(botAI); }
     static Trigger* Timer(PlayerbotAI* botAI) { return new TimerTrigger(botAI); }
+    static Trigger* ritual_of_summoning(PlayerbotAI* botAI) { return new RitualOfSummoningTrigger(botAI); }
     static Trigger* TimerBG(PlayerbotAI* botAI) { return new TimerBGTrigger(botAI); }
     static Trigger* force_rebuff_pending(PlayerbotAI* botAI) { return new ForceRebuffPendingTrigger(botAI); }
     static Trigger* NoTarget(PlayerbotAI* botAI) { return new NoTargetTrigger(botAI); }

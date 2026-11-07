@@ -8,6 +8,7 @@
 #define PLAYERBOTS_ACTIONCONTEXT_H
 
 #include "AddLootAction.h"
+#include "AssistRitualAction.h"
 #include "AttackAction.h"
 #include "AutoMaintenanceOnLevelupAction.h"
 #include "BattleGroundJoinAction.h"
@@ -206,6 +207,7 @@ public:
         creators["buy tabard"] = &ActionContext::buy_tabard;
         creators["guild manage nearby"] = &ActionContext::guild_manage_nearby;
         creators["clean quest log"] = &ActionContext::clean_quest_log;
+        creators["assist ritual of summoning"] = &ActionContext::assist_ritual_of_summoning;
         creators["move near water"] = &ActionContext::move_near_water;
         creators["go fishing"] = &ActionContext::go_fishing;
         creators["use fishing bobber"] = &ActionContext::use_fishing_bobber;
@@ -419,6 +421,7 @@ private:
     static Action* buy_tabard(PlayerbotAI* botAI) { return new BuyTabardAction(botAI); }
     static Action* guild_manage_nearby(PlayerbotAI* botAI) { return new GuildManageNearbyAction(botAI); }
     static Action* clean_quest_log(PlayerbotAI* botAI) { return new CleanQuestLogAction(botAI); }
+    static Action* assist_ritual_of_summoning(PlayerbotAI* botAI) { return new AssistRitualOfSummoningAction(botAI); }
     static Action* move_near_water(PlayerbotAI* botAI) { return new MoveNearWaterAction(botAI); }
     static Action* go_fishing(PlayerbotAI* botAI) { return new FishingAction(botAI);}
     static Action* use_fishing_bobber(PlayerbotAI* botAI) { return new UseBobberAction(botAI);}

@@ -3470,7 +3470,9 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
 
     uint32 CastingTime = !spellInfo->IsChanneled() ? spellInfo->CalcCastTime(bot) : spellInfo->GetDuration();
     // bool interruptOnMove = spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT;
-    if ((CastingTime || spellInfo->IsAutoRepeatRangedSpell()) && bot->isMoving())
+    // Ritual of Summoning is channeled at the caster. A following bot is moving;
+    // the cast action stops it. Do not refuse the spell for that.
+    if (spellid != 698 && (CastingTime || spellInfo->IsAutoRepeatRangedSpell()) && bot->isMoving())
     {
         if (!sPlayerbotAIConfig.LogInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
             LOG_DEBUG("playerbots", "Casting time and bot is moving - target name: {}, spellid: {}, bot name: {}",
