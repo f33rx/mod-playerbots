@@ -3495,7 +3495,9 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
             // Otherwise, allow Deep Freeze even if immune
         }
 
-        if (bot != target && ServerFacade::instance().GetDistance2d(bot, target) > sPlayerbotAIConfig.SightDistance)
+        // Ritual of Summoning targets a party member who is not here. The
+        // portal is created at the caster, so sight distance does not apply.
+        if (spellid != 698 && bot != target && ServerFacade::instance().GetDistance2d(bot, target) > sPlayerbotAIConfig.SightDistance)
         {
             if (!sPlayerbotAIConfig.LogInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
                 LOG_DEBUG("playerbots", "target is out of sight distance - target name: {}, spellid: {}, bot name: {}",
@@ -3541,6 +3543,15 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
         case SPELL_FAILED_NOT_SHAPESHIFT:
         case SPELL_FAILED_OUT_OF_RANGE:
             return true;
+        case SPELL_FAILED_LINE_OF_SIGHT:
+            // Ritual of Summoning targets someone who is not in sight.
+            // An older core still reports LOS; try the cast anyway.
+            if (spellid == 698)
+                return true;
+            if (!sPlayerbotAIConfig.LogInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
+                LOG_DEBUG("playerbots", "CanCastSpell Check Failed. - target name: {}, spellid: {}, bot name: {}, result: {}",
+                    target->GetName(), spellid, bot->GetName(), result);
+            return false;
         default:
             if (!sPlayerbotAIConfig.LogInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
                 LOG_DEBUG("playerbots", "CanCastSpell Check Failed. - target name: {}, spellid: {}, bot name: {}, result: {}",
