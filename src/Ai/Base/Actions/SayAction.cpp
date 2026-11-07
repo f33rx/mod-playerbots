@@ -55,6 +55,9 @@ SayAction::SayAction(PlayerbotAI* botAI) : Action(botAI, "say"), Qualified() {}
 
 bool SayAction::Execute(Event /*event*/)
 {
+    if (IsSelfBot(bot))
+        return false;
+
     std::string text = "";
     std::map<std::string, std::string> placeholders;
     Unit* target = AI_VALUE(Unit*, "tank target");

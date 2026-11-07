@@ -2924,10 +2924,9 @@ std::vector<Player*> PlayerbotAI::GetAllPlayersInGroup()
 
 bool PlayerbotAI::SayToGuild(std::string const& msg)
 {
-    if (msg.empty())
-    {
+    // A selfbot is the player. Do not speak for them.
+    if (IsSelfBot(bot) || msg.empty())
         return false;
-    }
 
     if (bot->GetGuildId())
     {
@@ -2947,10 +2946,8 @@ bool PlayerbotAI::SayToGuild(std::string const& msg)
 
 bool PlayerbotAI::SayToWorld(std::string const& msg)
 {
-    if (msg.empty())
-    {
+    if (IsSelfBot(bot) || msg.empty())
         return false;
-    }
 
     ChannelMgr* cMgr = ChannelMgr::forTeam(bot->GetTeamId());
     if (!cMgr)
@@ -2969,7 +2966,7 @@ bool PlayerbotAI::SayToWorld(std::string const& msg)
 bool PlayerbotAI::SayToChannel(std::string const& msg, ChatChannelId const& chanId)
 {
     // Checks whether the message or ChannelMgr is valid
-    if (msg.empty())
+    if (IsSelfBot(bot) || msg.empty())
         return false;
 
     ChannelMgr* cMgr = ChannelMgr::forTeam(bot->GetTeamId());
@@ -3023,7 +3020,7 @@ bool PlayerbotAI::SayToChannel(std::string const& msg, ChatChannelId const& chan
 
 bool PlayerbotAI::SayToParty(std::string const& msg)
 {
-    if (!bot->GetGroup())
+    if (IsSelfBot(bot) || !bot->GetGroup())
         return false;
 
     WorldPacket data;
@@ -3040,7 +3037,7 @@ bool PlayerbotAI::SayToParty(std::string const& msg)
 
 bool PlayerbotAI::SayToRaid(std::string const& msg)
 {
-    if (!bot->GetGroup() || !bot->GetGroup()->isRaidGroup())
+    if (IsSelfBot(bot) || !bot->GetGroup() || !bot->GetGroup()->isRaidGroup())
         return false;
 
     WorldPacket data;
@@ -3057,6 +3054,9 @@ bool PlayerbotAI::SayToRaid(std::string const& msg)
 
 bool PlayerbotAI::Yell(std::string const& msg)
 {
+    if (IsSelfBot(bot))
+        return false;
+
     if (bot->GetTeamId() == TeamId::TEAM_ALLIANCE)
     {
         bot->Yell(msg, LANG_COMMON);
@@ -3071,6 +3071,9 @@ bool PlayerbotAI::Yell(std::string const& msg)
 
 bool PlayerbotAI::Say(std::string const& msg)
 {
+    if (IsSelfBot(bot))
+        return false;
+
     if (bot->GetTeamId() == TeamId::TEAM_ALLIANCE)
     {
         bot->Say(msg, LANG_COMMON);
@@ -3085,6 +3088,9 @@ bool PlayerbotAI::Say(std::string const& msg)
 
 bool PlayerbotAI::Whisper(std::string const& msg, std::string const& receiverName)
 {
+    if (IsSelfBot(bot))
+        return false;
+
     const auto receiver = ObjectAccessor::FindPlayerByName(receiverName);
     if (!receiver)
     {
