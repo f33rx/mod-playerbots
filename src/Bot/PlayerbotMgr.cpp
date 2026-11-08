@@ -18,6 +18,7 @@
 #include "GuildMgr.h"
 #include "ObjectAccessor.h"
 #include "ObjectGuid.h"
+#include "MotionMaster.h"
 #include "ObjectMgr.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotFactory.h"
@@ -1102,6 +1103,16 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
         if (GET_PLAYERBOT_AI(master))
         {
             messages.push_back("SelfBot is now deactivated.");
+            // The AI starts MoveFollow. Deleting it does not cancel that
+            // generator, so the character keeps walking after the message.
+            master->InterruptNonMeleeSpells(false);
+            master->AttackStop();
+            if (Pet* pet = master->GetPet())
+                pet->AttackStop();
+            master->StopMoving();
+            if (MotionMaster* mm = master->GetMotionMaster())
+                mm->Clear(false);
+            master->SetSelection(ObjectGuid::Empty);
             delete GET_PLAYERBOT_AI(master);
 
             if (master->isTaxiCheater())
