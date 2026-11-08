@@ -2924,10 +2924,9 @@ std::vector<Player*> PlayerbotAI::GetAllPlayersInGroup()
 
 bool PlayerbotAI::SayToGuild(std::string const& msg)
 {
-    if (msg.empty())
-    {
+    // A selfbot is the player. Do not speak for them.
+    if (IsSelfBot(bot) || msg.empty())
         return false;
-    }
 
     if (bot->GetGuildId())
     {
@@ -2947,10 +2946,8 @@ bool PlayerbotAI::SayToGuild(std::string const& msg)
 
 bool PlayerbotAI::SayToWorld(std::string const& msg)
 {
-    if (msg.empty())
-    {
+    if (IsSelfBot(bot) || msg.empty())
         return false;
-    }
 
     ChannelMgr* cMgr = ChannelMgr::forTeam(bot->GetTeamId());
     if (!cMgr)
@@ -2969,7 +2966,7 @@ bool PlayerbotAI::SayToWorld(std::string const& msg)
 bool PlayerbotAI::SayToChannel(std::string const& msg, ChatChannelId const& chanId)
 {
     // Checks whether the message or ChannelMgr is valid
-    if (msg.empty())
+    if (IsSelfBot(bot) || msg.empty())
         return false;
 
     ChannelMgr* cMgr = ChannelMgr::forTeam(bot->GetTeamId());
@@ -3023,7 +3020,7 @@ bool PlayerbotAI::SayToChannel(std::string const& msg, ChatChannelId const& chan
 
 bool PlayerbotAI::SayToParty(std::string const& msg)
 {
-    if (!bot->GetGroup())
+    if (IsSelfBot(bot) || !bot->GetGroup())
         return false;
 
     WorldPacket data;
@@ -3040,7 +3037,7 @@ bool PlayerbotAI::SayToParty(std::string const& msg)
 
 bool PlayerbotAI::SayToRaid(std::string const& msg)
 {
-    if (!bot->GetGroup() || !bot->GetGroup()->isRaidGroup())
+    if (IsSelfBot(bot) || !bot->GetGroup() || !bot->GetGroup()->isRaidGroup())
         return false;
 
     WorldPacket data;
@@ -3057,6 +3054,9 @@ bool PlayerbotAI::SayToRaid(std::string const& msg)
 
 bool PlayerbotAI::Yell(std::string const& msg)
 {
+    if (IsSelfBot(bot))
+        return false;
+
     if (bot->GetTeamId() == TeamId::TEAM_ALLIANCE)
     {
         bot->Yell(msg, LANG_COMMON);
@@ -3071,6 +3071,9 @@ bool PlayerbotAI::Yell(std::string const& msg)
 
 bool PlayerbotAI::Say(std::string const& msg)
 {
+    if (IsSelfBot(bot))
+        return false;
+
     if (bot->GetTeamId() == TeamId::TEAM_ALLIANCE)
     {
         bot->Say(msg, LANG_COMMON);
@@ -3085,6 +3088,9 @@ bool PlayerbotAI::Say(std::string const& msg)
 
 bool PlayerbotAI::Whisper(std::string const& msg, std::string const& receiverName)
 {
+    if (IsSelfBot(bot))
+        return false;
+
     const auto receiver = ObjectAccessor::FindPlayerByName(receiverName);
     if (!receiver)
     {
@@ -3470,7 +3476,9 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
 
     uint32 CastingTime = !spellInfo->IsChanneled() ? spellInfo->CalcCastTime(bot) : spellInfo->GetDuration();
     // bool interruptOnMove = spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT;
-    if ((CastingTime || spellInfo->IsAutoRepeatRangedSpell()) && bot->isMoving())
+    // Ritual of Summoning is channeled at the caster. A following bot is moving;
+    // the cast action stops it. Do not refuse the spell for that.
+    if (spellid != 698 && (CastingTime || spellInfo->IsAutoRepeatRangedSpell()) && bot->isMoving())
     {
         if (!sPlayerbotAIConfig.LogInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
             LOG_DEBUG("playerbots", "Casting time and bot is moving - target name: {}, spellid: {}, bot name: {}",
@@ -3495,7 +3503,9 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
             // Otherwise, allow Deep Freeze even if immune
         }
 
-        if (bot != target && ServerFacade::instance().GetDistance2d(bot, target) > sPlayerbotAIConfig.SightDistance)
+        // Ritual of Summoning targets a party member who is not here. The
+        // portal is created at the caster, so sight distance does not apply.
+        if (spellid != 698 && bot != target && ServerFacade::instance().GetDistance2d(bot, target) > sPlayerbotAIConfig.SightDistance)
         {
             if (!sPlayerbotAIConfig.LogInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
                 LOG_DEBUG("playerbots", "target is out of sight distance - target name: {}, spellid: {}, bot name: {}",
@@ -3541,6 +3551,15 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
         case SPELL_FAILED_NOT_SHAPESHIFT:
         case SPELL_FAILED_OUT_OF_RANGE:
             return true;
+        case SPELL_FAILED_LINE_OF_SIGHT:
+            // Ritual of Summoning targets someone who is not in sight.
+            // An older core still reports LOS; try the cast anyway.
+            if (spellid == 698)
+                return true;
+            if (!sPlayerbotAIConfig.LogInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
+                LOG_DEBUG("playerbots", "CanCastSpell Check Failed. - target name: {}, spellid: {}, bot name: {}, result: {}",
+                    target->GetName(), spellid, bot->GetName(), result);
+            return false;
         default:
             if (!sPlayerbotAIConfig.LogInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
                 LOG_DEBUG("playerbots", "CanCastSpell Check Failed. - target name: {}, spellid: {}, bot name: {}, result: {}",

@@ -87,6 +87,9 @@ void EmoteActionBase::InitEmotes()
 
 bool EmoteActionBase::Emote(Unit* target, uint32 type, bool textEmote)
 {
+    if (IsSelfBot(bot))
+        return false;
+
     if (target && !bot->HasInArc(static_cast<float>(M_PI), target, sPlayerbotAIConfig.SightDistance))
         bot->SetFacingToObject(target);
 
